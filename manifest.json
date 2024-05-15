@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "TCGPlayer Auto-Login",
+  "version": "1.0",
+  "description": "Automatically fills in login credentials on TCGplayer.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "system.cpu",
+    "system.memory",
+    "system.storage",
+    "system.display",
+    "tabs",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
