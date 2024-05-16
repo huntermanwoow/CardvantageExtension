@@ -35,12 +35,13 @@ function scrapeDataFromCurrentPage() {
 
 function searchDataFromCurrentPage(parameter) {
     try {
+        console.log(parameter);
         const productElements = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'));
         productElements.forEach(element => {
             console.log(element.innerText);
+            const clickButton = element.parentElement.parentElement.parentElement.lastElementChild.children[0];
             if (element.innerText === parameter) {
-                console.log(element.innerText);
-                element.parentNode.lastElementChild.childNode.click()
+                clickButton.click();
             }
         });
     } catch (error) {
@@ -50,6 +51,7 @@ function searchDataFromCurrentPage(parameter) {
 
 function SearchProductByNextPage(parameter) {
     const nextPageButton = document.querySelector('.pager').lastElementChild.previousElementSibling;
+    searchDataFromCurrentPage(parameter);
     // If the "Next" button exists, click it and scrape data
     if (nextPageButton) {
         setTimeout(() => {
@@ -63,6 +65,7 @@ function SearchProductByNextPage(parameter) {
 // Define a function to navigate to the next page
 function GetAllProductsByNextPage() {
     const nextPageButton = document.querySelector('.pager').lastElementChild.previousElementSibling;
+    scrapeDataFromCurrentPage();
     // If the "Next" button exists, click it and scrape data
     if (nextPageButton) {
         setTimeout(() => {
@@ -98,45 +101,53 @@ window.addEventListener('load', () => {
     if (window.location.href === "https://store.tcgplayer.com/admin/product/catalog") {
         chrome.storage.local.get(['inventoryStatus', 'product'], function (result) {
             if (result.inventoryStatus === "manageProductToInventory") {
-                console.log(result.inventoryStatus);
                 const checkButton = document.querySelector('#OnlyMyInventoryLabel');
-                if (checkButton) checkButton.click();
                 const searchButton = document.querySelector('#Search');
-                if (searchButton) searchButton.click();
-                var urlChangeInterval = setInterval(() => {
-                    // Perform scraping process here
+                if (checkButton && searchButton) {
+                    checkButton.click();
+                    searchButton.click();
+                }
+                setTimeout(() => {
                     SearchProductByNextPage(result.product.product.productname);
                     var scrapingCompleted = false;
                     if (scrapingCompleted) {
-                        // Clear the interval and close the URL
-                        clearInterval(urlChangeInterval);
                         window.close(); // Close the current tab or window
                     }
-                }, 500);
+                }, 2000);
             }
             if (result.inventoryStatus === "addProductToInventory") {
-                var urlChangeInterval = setInterval(() => {
+                setTimeout(() => {
                     // Perform scraping process here
                     SearchProductByNextPage(result.product.product.productname);
                     var scrapingCompleted = false;
                     if (scrapingCompleted) {
-                        // Clear the interval and close the URL
-                        clearInterval(urlChangeInterval);
                         window.close(); // Close the current tab or window
                     }
-                }, 500);
+                }, 2000);
             }
             if (result.inventoryStatus === "login") {
-                var urlChangeInterval = setInterval(() => {
+                setTimeout(() => {
                     // Perform scraping process here
                     GetAllProductsByNextPage();
                     var scrapingCompleted = false;
                     if (scrapingCompleted) {
-                        // Clear the interval and close the URL
-                        clearInterval(urlChangeInterval);
                         window.close(); // Close the current tab or window
                     }
-                }, 500);
+                }, 2000);
+            }
+        });
+    }
+    if (document.querySelector('input[value="Clear Inventory"]')) {
+        chrome.storage.local.get(['inventoryStatus', 'product'], function (result) {
+            if (result.inventoryStatus === "manageProductToInventory" || result.inventoryStatus === "addProductToInventory") {
+                const inputField1 = document.querySelector('span[data-bind="validationMessage: newPrice"]').previousElementSibling;
+                const inputField2 = document.querySelector('span[data-bind="validationMessage: quantity"]').previousElementSibling;
+                console.log(inputField1, inputField2);
+                console.log(result.product.product.Price);
+                inputField1.value = result.product.product.Price;
+                inputField2.value = result.product.product.InStock;
+                const saveBtn = document.querySelector('input[value="Save"]');
+                saveBtn.click();
             }
         });
     }
@@ -149,5 +160,9 @@ window.addEventListener('message', event => {
 
     if (event.source === window && event.data.type && (event.data.type === 'manageProductToInventory')) {
         chrome.runtime.sendMessage({ type: 'manageProductToInventory', product: event.data.product });
+    }
+
+    if (event.source === window && event.data.type && (event.data.type === 'startScraping')) {
+        chrome.runtime.sendMessage({ type: 'startScraping' });
     }
 });

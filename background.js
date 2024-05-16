@@ -1,13 +1,6 @@
 importScripts('lib/axios.min.js');
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'loginToTCGplayer') {
-        chrome.tabs.create({ url: 'https://www.tcgplayer.com/login?returnUrl=https://store.tcgplayer.com/admin/product/catalog' }, function (tab) {
-            chrome.storage.local.set({ 'inventoryStatus': 'login' });
-            chrome.storage.local.set({ 'product': null });
-        });
-        sendResponse({ status: 'success', message: 'Navigating to TCGplayer login page...' });
-    }
     if (message.action === 'scrapedData') {
         console.log('Received scraped data:', message.data);
         if (message.data.length !== 0) {
@@ -40,6 +33,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.tabs.create({ url: 'https://store.tcgplayer.com/admin/product/catalog' }, function (tab) {
             chrome.storage.local.set({ 'inventoryStatus': 'manageProductToInventory' })
             chrome.storage.local.set({ 'product': message });
+        });
+    }
+    if (message.type === 'startScraping') {
+        console.log("start");
+        chrome.tabs.create({ url: 'https://www.tcgplayer.com/login?returnUrl=https://store.tcgplayer.com/admin/product/catalog' }, function (tab) {
+            chrome.storage.local.set({ 'inventoryStatus': 'login' });
+            chrome.storage.local.set({ 'product': null });
         });
     }
 });
