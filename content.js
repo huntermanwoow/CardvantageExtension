@@ -35,8 +35,11 @@ function scrapeDataFromCurrentPage() {
 
 function searchDataFromCurrentPage(parameter) {
     try {
+        const productElements = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'));
         productElements.forEach(element => {
+            console.log(element.innerText);
             if (element.innerText === parameter) {
+                console.log(element.innerText);
                 element.parentNode.lastElementChild.childNode.click()
             }
         });
@@ -49,11 +52,11 @@ function SearchProductByNextPage(parameter) {
     const nextPageButton = document.querySelector('.pager').lastElementChild.previousElementSibling;
     // If the "Next" button exists, click it and scrape data
     if (nextPageButton) {
-        nextPageButton.click();
         setTimeout(() => {
             searchDataFromCurrentPage(parameter);
             SearchProductByNextPage(parameter);
-        }, 1000);
+        }, 2000);
+        nextPageButton.click();
     }
 }
 
@@ -62,14 +65,13 @@ function GetAllProductsByNextPage() {
     const nextPageButton = document.querySelector('.pager').lastElementChild.previousElementSibling;
     // If the "Next" button exists, click it and scrape data
     if (nextPageButton) {
-        nextPageButton.click();
         setTimeout(() => {
             scrapeDataFromCurrentPage();
             GetAllProductsByNextPage();
-        }, 1000);
+        }, 2000);
+        nextPageButton.click();
     }
 }
-
 
 window.addEventListener('load', () => {
     var emailInput = document.querySelector('input[type="email"]');
@@ -94,18 +96,47 @@ window.addEventListener('load', () => {
         }
     }
     if (window.location.href === "https://store.tcgplayer.com/admin/product/catalog") {
-        chrome.storage.local.get(['inventoryStatus'], function (result) {
+        chrome.storage.local.get(['inventoryStatus', 'product'], function (result) {
             if (result.inventoryStatus === "manageProductToInventory") {
-                SearchProductByNextPage()
+                console.log(result.inventoryStatus);
+                const checkButton = document.querySelector('#OnlyMyInventoryLabel');
+                if (checkButton) checkButton.click();
+                const searchButton = document.querySelector('#Search');
+                if (searchButton) searchButton.click();
+                var urlChangeInterval = setInterval(() => {
+                    // Perform scraping process here
+                    SearchProductByNextPage(result.product.product.productname);
+                    var scrapingCompleted = false;
+                    if (scrapingCompleted) {
+                        // Clear the interval and close the URL
+                        clearInterval(urlChangeInterval);
+                        window.close(); // Close the current tab or window
+                    }
+                }, 500);
             }
             if (result.inventoryStatus === "addProductToInventory") {
-                SearchProductByNextPage()
+                var urlChangeInterval = setInterval(() => {
+                    // Perform scraping process here
+                    SearchProductByNextPage(result.product.product.productname);
+                    var scrapingCompleted = false;
+                    if (scrapingCompleted) {
+                        // Clear the interval and close the URL
+                        clearInterval(urlChangeInterval);
+                        window.close(); // Close the current tab or window
+                    }
+                }, 500);
             }
             if (result.inventoryStatus === "login") {
                 var urlChangeInterval = setInterval(() => {
-                    clearInterval(urlChangeInterval); // Stop checking for URL changes
+                    // Perform scraping process here
                     GetAllProductsByNextPage();
-                }, 1000);
+                    var scrapingCompleted = false;
+                    if (scrapingCompleted) {
+                        // Clear the interval and close the URL
+                        clearInterval(urlChangeInterval);
+                        window.close(); // Close the current tab or window
+                    }
+                }, 500);
             }
         });
     }
