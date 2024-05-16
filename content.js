@@ -77,25 +77,27 @@ function GetAllProductsByNextPage() {
 }
 
 window.addEventListener('load', () => {
-    var emailInput = document.querySelector('input[type="email"]');
-    var passwordInput = document.querySelector('input[type="password"]');
+    if (window.location.href === "https://www.tcgplayer.com/login?returnUrl=https://store.tcgplayer.com/admin/product/catalog") {
+        var emailInput = document.querySelector('input[type="email"]');
+        var passwordInput = document.querySelector('input[type="password"]');
 
-    if (emailInput && passwordInput) {
-        // Simulate user input by setting input values directly
-        emailInput.value = 'izzyprintingllc@gmail.com';
-        passwordInput.value = 'Password1234!!';
+        if (emailInput && passwordInput) {
+            // Simulate user input by setting input values directly
+            emailInput.value = 'izzyprintingllc@gmail.com';
+            passwordInput.value = 'Password1234!!';
 
-        // Trigger input events to simulate user interaction
-        emailInput.dispatchEvent(new Event('input'));
-        passwordInput.dispatchEvent(new Event('input'));
+            // Trigger input events to simulate user interaction
+            emailInput.dispatchEvent(new Event('input'));
+            passwordInput.dispatchEvent(new Event('input'));
 
-        // Get the submit button
-        var submitButton = document.querySelector('button[type="submit"]');
-        if (submitButton) {
-            // Click the submit button to initiate login
-            submitButton.click();
-        } else {
-            console.error('Submit button not found.');
+            // Get the submit button
+            var submitButton = document.querySelector('button[type="submit"]');
+            if (submitButton) {
+                // Click the submit button to initiate login
+                submitButton.click();
+            } else {
+                console.error('Submit button not found.');
+            }
         }
     }
     if (window.location.href === "https://store.tcgplayer.com/admin/product/catalog") {
@@ -109,30 +111,18 @@ window.addEventListener('load', () => {
                 }
                 setTimeout(() => {
                     SearchProductByNextPage(result.product.product.productname);
-                    var scrapingCompleted = false;
-                    if (scrapingCompleted) {
-                        window.close(); // Close the current tab or window
-                    }
                 }, 2000);
             }
             if (result.inventoryStatus === "addProductToInventory") {
                 setTimeout(() => {
                     // Perform scraping process here
                     SearchProductByNextPage(result.product.product.productname);
-                    var scrapingCompleted = false;
-                    if (scrapingCompleted) {
-                        window.close(); // Close the current tab or window
-                    }
                 }, 2000);
             }
             if (result.inventoryStatus === "login") {
                 setTimeout(() => {
                     // Perform scraping process here
                     GetAllProductsByNextPage();
-                    var scrapingCompleted = false;
-                    if (scrapingCompleted) {
-                        window.close(); // Close the current tab or window
-                    }
                 }, 2000);
             }
         });

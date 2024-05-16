@@ -35,6 +35,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             chrome.storage.local.set({ 'product': message });
         });
     }
+    
     if (message.type === 'startScraping') {
         console.log("start");
         chrome.tabs.create({ url: 'https://www.tcgplayer.com/login?returnUrl=https://store.tcgplayer.com/admin/product/catalog' }, function (tab) {
