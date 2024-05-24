@@ -1,20 +1,21 @@
 function scrapeDataFromCurrentPage() {
     try {
         const productLines = Array.from(document.querySelectorAll('td[data-bind="text: ProductLine"]'))
-            .map(titleElement => titleElement.innerText);
+            .map(lineElement => lineElement.innerText);
         const views = Array.from(document.querySelectorAll('.product-image-thumbnail'))
-            .map(titleElement => titleElement.getAttribute('src'));
+            .map(viewElement => viewElement.getAttribute('src'));
         const productNames = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'))
-            .map(titleElement => titleElement.innerText);
+            .map(nameElement => nameElement.innerText);
         const sets = Array.from(document.querySelectorAll('span[data-bind="text: SetName"]'))
-            .map(titleElement => titleElement.innerText);
+            .map(setElement => setElement.innerText);
         const rarities = Array.from(document.querySelectorAll('td[data-bind="text: DisplayedNumber"]'))
-            .map(titleElement => titleElement.previousElementSibling.innerText);
+            .map(rarityElement => rarityElement.previousElementSibling.innerText);
         const numbers = Array.from(document.querySelectorAll('td[data-bind="text: DisplayedNumber"]'))
-            .map(titleElement => titleElement.innerText);
+            .map(numberElement => numberElement.innerText);
         const instocks = Array.from(document.querySelectorAll('span[data-bind="text: InStock"]'))
-            .map(titleElement => titleElement.innerText);
-
+            .map(stockElement => stockElement.innerText);
+        const links = Array.from(document.querySelectorAll('.product-image-desktop'))
+            .map(linkElement => linkElement.getAttribute('href'))
         // Send scraped data to the background script
         chrome.runtime.sendMessage({
             action: 'scrapedData',
@@ -25,7 +26,8 @@ function scrapeDataFromCurrentPage() {
                 sets: sets,
                 rarities: rarities,
                 numbers: numbers,
-                instocks: instocks
+                instocks: instocks,
+                links: links
             }
         });
     } catch (error) {
@@ -35,7 +37,6 @@ function scrapeDataFromCurrentPage() {
 
 function searchDataFromCurrentPage(parameter) {
     try {
-        console.log(parameter);
         const productElements = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'));
         productElements.forEach(element => {
             console.log(element.innerText);
@@ -46,19 +47,6 @@ function searchDataFromCurrentPage(parameter) {
         });
     } catch (error) {
         console.error('Error scraping data:', error);
-    }
-}
-
-function SearchProductByNextPage(parameter) {
-    const nextPageButton = document.querySelector('.pager').lastElementChild.previousElementSibling;
-    searchDataFromCurrentPage(parameter);
-    // If the "Next" button exists, click it and scrape data
-    if (nextPageButton) {
-        setTimeout(() => {
-            searchDataFromCurrentPage(parameter);
-            SearchProductByNextPage(parameter);
-        }, 2000);
-        nextPageButton.click();
     }
 }
 
@@ -76,6 +64,55 @@ function GetAllProductsByNextPage() {
     }
 }
 
+const scrapeBulkData = async (req, res) => {
+    try {
+        const lowestPriceElem = document.querySelector('span[data-bind="formatCurrency: lowestPrice"]');
+        const lowestShippingElem = document.querySelector('span[data-bind="formatCurrency: lowestShipping"]');
+        const lastSoldPriceElem = document.querySelector('span[data-bind="formatCurrency: lastSoldPrice"]');
+        const marketPriceElem = document.querySelector('span[data-bind="formatCurrency: marketPrice"]');
+        const productNameElem = document.querySelector('span[data-bind="text: productName"]')
+        // Ensure all elements are found
+        const lowestPrice = lowestPriceElem ? lowestPriceElem.innerText : null;
+        const lowestShipping = lowestShippingElem ? lowestShippingElem.innerText : null;
+        const lastSoldPrice = lastSoldPriceElem ? lowestShippingElem.innerText : null;
+        const marketPrice = marketPriceElem ? marketPriceElem.innerText : null;
+        const productName = productNameElem ? productNameElem.innerText : null;
+        chrome.runtime.sendMessage({
+            action: 'bulkData',
+            data: {
+                lowestPrice: lowestPrice,
+                lowestShipping: lowestShipping,
+                lastSoldPrice: lastSoldPrice,
+                marketPrice: marketPrice,
+                productName: productName
+            },
+            message: 'success bulk'
+        });
+    } catch (error) {
+        console.error('Error scraping bulk data:', error);
+    }
+}
+
+const insertAndupdateData = async (req, res) => {
+    try {
+        console.log(result.inventoryProduct);
+        const productName = document.querySelector('span[data-bind="text: productName"]').innerText;
+        const inputField1 = document.querySelector('span[data-bind="validationMessage: newPrice"]').previousElementSibling;
+        const inputField2 = document.querySelector('span[data-bind="validationMessage: quantity"]').previousElementSibling;
+        Object.keys(message.inventoryProduct).forEach((item, index) => {
+            if (item === productName) {
+                console.log(item);
+                inputField1.value = result.inventoryProduct[item].price;
+                inputField2.value = result.inventoryProduct[item].count;
+                const saveBtn = document.querySelector('input[value="Save"]');
+                saveBtn.click();
+            }
+        })
+    } catch (error) {
+        console.error(error);
+    }
+}
+
 window.addEventListener('load', () => {
     if (window.location.href === "https://www.tcgplayer.com/login?returnUrl=https://store.tcgplayer.com/admin/product/catalog") {
         var emailInput = document.querySelector('input[type="email"]');
@@ -84,9 +121,7 @@ window.addEventListener('load', () => {
         if (emailInput && passwordInput) {
             // Simulate user input by setting input values directly
             emailInput.value = 'izzyprintingllc@gmail.com';
-            passwordInput.value = 'Password1234!!';
-
-            // Trigger input events to simulate user interaction
+            passwordInput.value = 'Pencil1234!!';
             emailInput.dispatchEvent(new Event('input'));
             passwordInput.dispatchEvent(new Event('input'));
 
@@ -101,58 +136,58 @@ window.addEventListener('load', () => {
         }
     }
     if (window.location.href === "https://store.tcgplayer.com/admin/product/catalog") {
-        chrome.storage.local.get(['inventoryStatus', 'product'], function (result) {
-            if (result.inventoryStatus === "manageProductToInventory") {
-                const checkButton = document.querySelector('#OnlyMyInventoryLabel');
-                const searchButton = document.querySelector('#Search');
-                if (checkButton && searchButton) {
-                    checkButton.click();
-                    searchButton.click();
-                }
-                setTimeout(() => {
-                    SearchProductByNextPage(result.product.product.productname);
-                }, 2000);
-            }
-            if (result.inventoryStatus === "addProductToInventory") {
-                setTimeout(() => {
-                    // Perform scraping process here
-                    SearchProductByNextPage(result.product.product.productname);
-                }, 2000);
-            }
+        chrome.storage.local.get(['inventoryStatus', 'product', 'bulkStatus', 'bulkproduct'], function (result) {
             if (result.inventoryStatus === "login") {
+                console.log(result.inventoryStatus);
                 setTimeout(() => {
-                    // Perform scraping process here
                     GetAllProductsByNextPage();
+                    window.close();
                 }, 2000);
+                chrome.local.storage.clear(() => {
+                    console.log("success clear!!!");
+                })
             }
         });
     }
+
     if (document.querySelector('input[value="Clear Inventory"]')) {
-        chrome.storage.local.get(['inventoryStatus', 'product'], function (result) {
-            if (result.inventoryStatus === "manageProductToInventory" || result.inventoryStatus === "addProductToInventory") {
-                const inputField1 = document.querySelector('span[data-bind="validationMessage: newPrice"]').previousElementSibling;
-                const inputField2 = document.querySelector('span[data-bind="validationMessage: quantity"]').previousElementSibling;
-                console.log(inputField1, inputField2);
-                console.log(result.product.product.Price);
-                inputField1.value = result.product.product.Price;
-                inputField2.value = result.product.product.InStock;
-                const saveBtn = document.querySelector('input[value="Save"]');
-                saveBtn.click();
+        chrome.storage.local.get(['inventoryStatus', 'inventoryProduct', 'bulkStatus', 'bulkproduct'], function (result) {
+            if (result.inventoryStatus === "manage" || result.inventoryStatus === "add") {
+                insertAndupdateData().then(() => {
+                    // window.close();
+                })
+            }
+
+            else if (result.bulkStatus === 'add' || result.bulkStatus === 'manage') {
+                scrapeBulkData().then(() => {
+                    window.close();
+                })
+                    .catch((error) => {
+                        console.error('Error occurred during data scraping:', error);
+                    });
             }
         });
     }
 });
 
 window.addEventListener('message', event => {
-    if (event.source === window && event.data.type && (event.data.type === 'addProductToInventory')) {
-        chrome.runtime.sendMessage({ type: 'addProductToInventory', product: event.data.product });
+    if (event.source === window && event.data.type && (event.data.type === 'addMyInventory')) {
+        chrome.runtime.sendMessage({ type: 'addMyInventory', products: event.data.products });
     }
 
-    if (event.source === window && event.data.type && (event.data.type === 'manageProductToInventory')) {
-        chrome.runtime.sendMessage({ type: 'manageProductToInventory', product: event.data.product });
+    if (event.source === window && event.data.type && (event.data.type === 'manageMyInventory')) {
+        chrome.runtime.sendMessage({ type: 'manageMyInventory', products: event.data.products });
     }
 
     if (event.source === window && event.data.type && (event.data.type === 'startScraping')) {
         chrome.runtime.sendMessage({ type: 'startScraping' });
+    }
+
+    if (event.source === window && event.data.type && (event.data.type === 'bulkManageProducts')) {
+        chrome.runtime.sendMessage({ type: 'bulkManageProducts', products: event.data.products });
+    }
+
+    if (event.source === window && event.data.type && (event.data.type === 'bulkAddProducts')) {
+        chrome.runtime.sendMessage({ type: 'bulkAddProducts', products: event.data.products });
     }
 });

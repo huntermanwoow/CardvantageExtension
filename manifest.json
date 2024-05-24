@@ -1,8 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "TCGPlayer Auto-Login",
+  "name": "TCGPlayer Scraping",
   "version": "1.0",
-  "description": "Automatically fills in login credentials on TCGplayer.",
+  "description": "Automatically scrape data.",
+  "icons": {
+    "16": "images/instagram.svg"
+  },
   "permissions": [
     "storage",
     "activeTab",
