@@ -6,6 +6,7 @@ function scrapeDataFromCurrentPage() {
             .map(viewElement => viewElement.getAttribute('src'));
         const productNames = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'))
             .map(nameElement => nameElement.innerText);
+        const uniqueProductNames = Array.from(new Set(productNames));
         const sets = Array.from(document.querySelectorAll('span[data-bind="text: SetName"]'))
             .map(setElement => setElement.innerText);
         const rarities = Array.from(document.querySelectorAll('td[data-bind="text: DisplayedNumber"]'))
@@ -17,18 +18,20 @@ function scrapeDataFromCurrentPage() {
         const links = Array.from(document.querySelectorAll('.product-image-desktop'))
             .map(linkElement => linkElement.getAttribute('href'))
         // Send scraped data to the background script
+        const data = productLines.map((productLine, index) => ({
+            productLine,
+            view: views[index] || null,
+            productName: uniqueProductNames[index] || null,
+            set: sets[index] || null,
+            rarity: rarities[index] || null,
+            number: numbers[index] || null,
+            inStock: instocks[index] || null,
+            link: links[index] || null
+        }));
+
         chrome.runtime.sendMessage({
             action: 'scrapedData',
-            data: {
-                productLines: productLines,
-                views: views,
-                productNames: productNames,
-                sets: sets,
-                rarities: rarities,
-                numbers: numbers,
-                instocks: instocks,
-                links: links
-            }
+            data: data
         });
     } catch (error) {
         console.error('Error scraping data:', error);
@@ -59,7 +62,7 @@ function GetAllProductsByNextPage() {
         setTimeout(() => {
             scrapeDataFromCurrentPage();
             GetAllProductsByNextPage();
-        }, 2000);
+        }, 5000);
         nextPageButton.click();
     }
 }
@@ -93,19 +96,18 @@ const scrapeBulkData = async (req, res) => {
     }
 }
 
-const insertAndupdateData = async (req, res) => {
+const insertAndupdateData = async (param) => {
     try {
-        console.log(result.inventoryProduct);
+        console.log(param);
         const productName = document.querySelector('span[data-bind="text: productName"]').innerText;
         const inputField1 = document.querySelector('span[data-bind="validationMessage: newPrice"]').previousElementSibling;
         const inputField2 = document.querySelector('span[data-bind="validationMessage: quantity"]').previousElementSibling;
-        Object.keys(message.inventoryProduct).forEach((item, index) => {
+        Object.keys(param).forEach((item, index) => {
             if (item === productName) {
-                console.log(item);
-                inputField1.value = result.inventoryProduct[item].price;
-                inputField2.value = result.inventoryProduct[item].count;
-                const saveBtn = document.querySelector('input[value="Save"]');
-                saveBtn.click();
+                inputField1.value = param[item].price;
+                inputField2.value = param[item].count;
+                // const saveBtn = document.querySelector('input[value="Save"]');
+                // saveBtn.click();
             }
         })
     } catch (error) {
@@ -153,7 +155,7 @@ window.addEventListener('load', () => {
     if (document.querySelector('input[value="Clear Inventory"]')) {
         chrome.storage.local.get(['inventoryStatus', 'inventoryProduct', 'bulkStatus', 'bulkproduct'], function (result) {
             if (result.inventoryStatus === "manage" || result.inventoryStatus === "add") {
-                insertAndupdateData().then(() => {
+                insertAndupdateData(result.inventoryProduct).then(() => {
                     // window.close();
                 })
             }
