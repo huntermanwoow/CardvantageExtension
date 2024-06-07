@@ -9,8 +9,6 @@
   "permissions": [
     "storage",
     "activeTab",
-    "system.cpu",
-    "system.memory",
     "system.storage",
     "system.display",
     "tabs",
@@ -26,7 +24,8 @@
       ],
       "js": [
         "content.js"
-      ]
+      ],
+      "run_at": "document_idle"
     }
   ],
   "action": {

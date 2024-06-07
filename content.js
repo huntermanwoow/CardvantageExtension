@@ -1,195 +1,296 @@
-function scrapeDataFromCurrentPage() {
+async function runAfterModalLoaded() {
+    const modal = document.querySelector("ul.is-modal");
+    if (modal) {
+        console.log(modal.children);
+        let total = 0;
+        let count = 0;
+        for (let item of modal.children) {
+            const price = parseFloat(item.children[3].innerText.replace("$", ""));
+            if (!isNaN(price)) {
+                total += price;
+                count++;
+                if (count === 10) {
+                    return total / count;
+                }
+            }
+            console.log(total / count);
+        }
+        return count > 0 ? total / count : 0;
+    }
+    return 0;
+}
+
+function observeModalLoading() {
+    return new Promise((resolve, reject) => {
+        const observer = new MutationObserver((mutationsList, observer) => {
+            for (let mutation of mutationsList) {
+                if (mutation.type === 'childList') {
+                    const modal = document.querySelector("ul.is-modal");
+                    if (modal) {
+                        observer.disconnect(); // Stop observing once the modal is found
+                        const averagePrice = runAfterModalLoaded();
+                        resolve(averagePrice);
+                        break;
+                    }
+                }
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Timeout to stop observing after 30 seconds
+        setTimeout(() => {
+            observer.disconnect();
+            reject(new Error('Modal did not load within timeout period.'));
+        }, 30000);
+    });
+}
+
+function activateModalAndObserve() {
+    return new Promise((resolve, reject) => {
+        const modalButton = document.querySelector(".modal__activator");
+        if (modalButton) {
+            modalButton.click();
+            observeModalLoading().then(resolve).catch(reject);
+        } else {
+            reject(new Error('.modal__activator button not found'));
+        }
+    });
+}
+
+function scrapeOrderFromCurrentPage() {
     try {
-        const productLines = Array.from(document.querySelectorAll('td[data-bind="text: ProductLine"]'))
-            .map(lineElement => lineElement.innerText);
-        const views = Array.from(document.querySelectorAll('.product-image-thumbnail'))
-            .map(viewElement => viewElement.getAttribute('src'));
-        const productNames = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'))
-            .map(nameElement => nameElement.innerText);
-        const uniqueProductNames = Array.from(new Set(productNames));
-        const sets = Array.from(document.querySelectorAll('span[data-bind="text: SetName"]'))
-            .map(setElement => setElement.innerText);
-        const rarities = Array.from(document.querySelectorAll('td[data-bind="text: DisplayedNumber"]'))
-            .map(rarityElement => rarityElement.previousElementSibling.innerText);
-        const numbers = Array.from(document.querySelectorAll('td[data-bind="text: DisplayedNumber"]'))
-            .map(numberElement => numberElement.innerText);
-        const instocks = Array.from(document.querySelectorAll('span[data-bind="text: InStock"]'))
-            .map(stockElement => stockElement.innerText);
-        const links = Array.from(document.querySelectorAll('.product-image-desktop'))
-            .map(linkElement => linkElement.getAttribute('href'))
-        // Send scraped data to the background script
-        const data = productLines.map((productLine, index) => ({
-            productLine,
-            view: views[index] || null,
-            productName: uniqueProductNames[index] || null,
-            set: sets[index] || null,
-            rarity: rarities[index] || null,
-            number: numbers[index] || null,
-            inStock: instocks[index] || null,
+        const OrderNumbers = Array.from(document.querySelectorAll('td[data-label="Order #"]'))
+            .map(lineElement => lineElement.children[0].children[0].children[0].innerText);
+        const buyerNames = Array.from(document.querySelectorAll('td[data-label="Buyer Name"]'))
+            .map(buyerElement => buyerElement.innerText);
+        const orderDates = Array.from(document.querySelectorAll('td[data-label="Order Date"]'))
+            .map(dateElement => dateElement.innerText);
+        const statuses = Array.from(document.querySelectorAll('td[data-label="Status"]'))
+            .map(statusElement => statusElement.innerText);
+        const shippingTypes = Array.from(document.querySelectorAll('td[data-label="Shipping Type"]'))
+            .map(typeElement => typeElement.innerText);
+        const ProductAmts = Array.from(document.querySelectorAll('td[data-label="Product Amt"]'))
+            .map(productAmtElement => productAmtElement.innerText);
+        const shippingAmts = Array.from(document.querySelectorAll('td[data-label="Shipping Amt"]'))
+            .map(shippingAmtElement => shippingAmtElement.innerText);
+        const totalAmts = Array.from(document.querySelectorAll('td[data-label="Total Amt"]'))
+            .map(totalAmtElement => totalAmtElement.innerText);
+        const buyerPaids = Array.from(document.querySelectorAll('td[data-label="BuyerPaid"]'))
+            .map(buyerPaidElement => buyerPaidElement.innerText);
+        const links = Array.from(document.querySelectorAll('td[data-label="Order #"]'))
+            .map(lineElement => lineElement.children[0].children[0].children[0].getAttribute('href'));
+
+        const data = OrderNumbers.map((OrderNumber, index) => ({
+            OrderNumber,
+            buyerName: buyerNames[index] || null,
+            orderDate: orderDates[index] || null,
+            status: statuses[index] || null,
+            shippingType: shippingTypes[index] || null,
+            productAmt: ProductAmts[index] || null,
+            shippingAmt: shippingAmts[index] || null,
+            totalAmt: totalAmts[index] || null,
+            buyerPaid: buyerPaids[index] || null,
             link: links[index] || null
         }));
 
-        chrome.runtime.sendMessage({
-            action: 'scrapedData',
-            data: data
-        });
+        chrome.runtime.sendMessage({ action: 'scrapedOrder', data: data });
     } catch (error) {
-        console.error('Error scraping data:', error);
+        console.error('Error scraping order:', error);
     }
 }
 
-function searchDataFromCurrentPage(parameter) {
-    try {
-        const productElements = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'));
-        productElements.forEach(element => {
-            console.log(element.innerText);
-            const clickButton = element.parentElement.parentElement.parentElement.lastElementChild.children[0];
-            if (element.innerText === parameter) {
-                clickButton.click();
-            }
-        });
-    } catch (error) {
-        console.error('Error scraping data:', error);
-    }
-}
-
-// Define a function to navigate to the next page
-function GetAllProductsByNextPage() {
-    const nextPageButton = document.querySelector('.pager').lastElementChild.previousElementSibling;
-    scrapeDataFromCurrentPage();
-    // If the "Next" button exists, click it and scrape data
+function GetAllOrdersByNextPage() {
+    const nextPageButton = document.querySelector('.pagination-next').children[0];
     if (nextPageButton) {
+        scrapeOrderFromCurrentPage();
         setTimeout(() => {
-            scrapeDataFromCurrentPage();
-            GetAllProductsByNextPage();
+            nextPageButton.click();
+            GetAllOrdersByNextPage();
         }, 5000);
-        nextPageButton.click();
-    }
-}
-
-const scrapeBulkData = async (req, res) => {
-    try {
-        const lowestPriceElem = document.querySelector('span[data-bind="formatCurrency: lowestPrice"]');
-        const lowestShippingElem = document.querySelector('span[data-bind="formatCurrency: lowestShipping"]');
-        const lastSoldPriceElem = document.querySelector('span[data-bind="formatCurrency: lastSoldPrice"]');
-        const marketPriceElem = document.querySelector('span[data-bind="formatCurrency: marketPrice"]');
-        const productNameElem = document.querySelector('span[data-bind="text: productName"]')
-        // Ensure all elements are found
-        const lowestPrice = lowestPriceElem ? lowestPriceElem.innerText : null;
-        const lowestShipping = lowestShippingElem ? lowestShippingElem.innerText : null;
-        const lastSoldPrice = lastSoldPriceElem ? lowestShippingElem.innerText : null;
-        const marketPrice = marketPriceElem ? marketPriceElem.innerText : null;
-        const productName = productNameElem ? productNameElem.innerText : null;
-        chrome.runtime.sendMessage({
-            action: 'bulkData',
-            data: {
-                lowestPrice: lowestPrice,
-                lowestShipping: lowestShipping,
-                lastSoldPrice: lastSoldPrice,
-                marketPrice: marketPrice,
-                productName: productName
-            },
-            message: 'success bulk'
-        });
-    } catch (error) {
-        console.error('Error scraping bulk data:', error);
-    }
-}
-
-const insertAndupdateData = async (param) => {
-    try {
-        console.log(param);
-        const productName = document.querySelector('span[data-bind="text: productName"]').innerText;
-        const inputField1 = document.querySelector('span[data-bind="validationMessage: newPrice"]').previousElementSibling;
-        const inputField2 = document.querySelector('span[data-bind="validationMessage: quantity"]').previousElementSibling;
-        Object.keys(param).forEach((item, index) => {
-            if (item === productName) {
-                inputField1.value = param[item].price;
-                inputField2.value = param[item].count;
-                // const saveBtn = document.querySelector('input[value="Save"]');
-                // saveBtn.click();
-            }
-        })
-    } catch (error) {
-        console.error(error);
     }
 }
 
 window.addEventListener('load', () => {
-    if (window.location.href === "https://www.tcgplayer.com/login?returnUrl=https://store.tcgplayer.com/admin/product/catalog") {
-        var emailInput = document.querySelector('input[type="email"]');
-        var passwordInput = document.querySelector('input[type="password"]');
+    if (window.location.href === "https://www.tcgplayer.com/login?returnUrl=https://www.tcgplayer.com/search/sorcery-contested-realm/product?productLineName=sorcery-contested-realm&view=grid") {
+        const emailInput = document.querySelector('input[type="email"]');
+        const passwordInput = document.querySelector('input[type="password"]');
 
         if (emailInput && passwordInput) {
-            // Simulate user input by setting input values directly
             emailInput.value = 'izzyprintingllc@gmail.com';
             passwordInput.value = 'Pencil1234!!';
             emailInput.dispatchEvent(new Event('input'));
             passwordInput.dispatchEvent(new Event('input'));
-
-            // Get the submit button
-            var submitButton = document.querySelector('button[type="submit"]');
+            const submitButton = document.querySelector('button[type="submit"]');
             if (submitButton) {
-                // Click the submit button to initiate login
                 submitButton.click();
             } else {
                 console.error('Submit button not found.');
             }
         }
     }
-    if (window.location.href === "https://store.tcgplayer.com/admin/product/catalog") {
-        chrome.storage.local.get(['inventoryStatus', 'product', 'bulkStatus', 'bulkproduct'], function (result) {
-            if (result.inventoryStatus === "login") {
-                console.log(result.inventoryStatus);
-                setTimeout(() => {
-                    GetAllProductsByNextPage();
-                    window.close();
-                }, 2000);
-                chrome.local.storage.clear(() => {
-                    console.log("success clear!!!");
-                })
+
+    else if (window.location.href.includes("https://www.tcgplayer.com/search/sorcery-contested-realm/product?productLineName=sorcery-contested-realm&view=grid")) {
+        setInterval(() => {
+            const productLines = Array.from(document.querySelectorAll('h3.product-card__category-name'))
+                .map(lineElement => lineElement.innerText);
+            const rarityElements = Array.from(document.querySelectorAll('.product-card__rarity'))
+                .map(viewElement => viewElement.children[0].innerText);
+            const sets = Array.from(document.querySelectorAll('.product-card__set-name'))
+                .map(setElement => setElement.innerText);
+            const productNames = Array.from(document.querySelectorAll('span.product-card__title.truncate'))
+                .map(nameElement => nameElement.innerText);
+            const links = Array.from(document.querySelectorAll('.product-card__content'))
+                .map(linkElement => linkElement.children[0].getAttribute('href'));
+            const nextbtn = document.querySelector("a[aria-label='Next page']");
+
+            const data = productLines.map((productLine, index) => ({
+                productLine,
+                set: sets[index] || null,
+                productName: productNames[index] || null,
+                rarity: rarityElements[index] || null,
+                link: links[index] || null
+            }));
+
+            chrome.runtime.sendMessage({ action: 'scrapedCard', data: data });
+            nextbtn.click();
+        }, 10000);
+    }
+
+    else if (window.location.href.includes('https://store.tcgplayer.com/admin/product/manage')) {
+        chrome.storage.local.get(['inventoryProduct', 'bulkStatus'], function (result) {
+            if (result.bulkStatus === 'getAllSaveInfo') {
+                const lowestPrice = document.querySelector('span[data-bind="formatCurrency: lowestPrice"]')?.innerText;
+                const lastSoldPrice = document.querySelector('span[data-bind="formatCurrency: lowestPrice"]')?.innerText;
+                const lastSoldShipping = document.querySelector('span[data-bind="formatCurrency: lastSoldShipping"]')?.innerText;
+                const marketPrice = document.querySelector('span[data-bind="formatCurrency: marketPrice"]')?.innerText;
+
+                chrome.runtime.sendMessage({
+                    action: 'scrapeCardSaveInfo',
+                    data: {
+                        link: window.location.href,
+                        lowestPrice: lowestPrice || 0,
+                        lastSoldPrice: lastSoldPrice || 0,
+                        lastSoldShipping: lastSoldShipping || 0,
+                        marketPrice: marketPrice || 0
+                    },
+                    message: 'success'
+                }, function () {
+                    console.log("scrape carddetail");
+                });
+            } else if (result.bulkStatus === "updateCard") {
+                console.log(result.bulkStatus, result.inventoryProduct);
+                const productName = document.querySelector('span[data-bind="text: productName"]').innerText;
+                const inputField1 = document.querySelector('span[data-bind="validationMessage: newPrice"]').previousElementSibling;
+                const inputField2 = document.querySelector('span[data-bind="validationMessage: quantity"]').previousElementSibling;
+
+                Object.keys(result.inventoryProduct).forEach((item, index) => {
+                    if (item === productName) {
+                        inputField1.value = result.inventoryProduct[item].price;
+                        inputField2.value = result.inventoryProduct[item].count;
+                        inputField1.dispatchEvent(new Event('input'));
+                        inputField2.dispatchEvent(new Event('input'));
+                        const saveBtn = document.querySelector('input[value="Save"]');
+                        if (saveBtn) saveBtn.click();
+                    }
+                });
+
+                chrome.runtime.sendMessage({
+                    action: 'updatecard',
+                    link: window.location.href,
+                    message: 'success'
+                }, function () {
+                    console.log("card update");
+                });
             }
         });
     }
 
-    if (document.querySelector('input[value="Clear Inventory"]')) {
-        chrome.storage.local.get(['inventoryStatus', 'inventoryProduct', 'bulkStatus', 'bulkproduct'], function (result) {
-            if (result.inventoryStatus === "manage" || result.inventoryStatus === "add") {
-                insertAndupdateData(result.inventoryProduct).then(() => {
-                    // window.close();
+    else if (window.location.href.includes("https://www.tcgplayer.com/product/")) {
+        setInterval(() => {
+            const selector = Array.from(document.querySelectorAll('strong'));
+            const ListPrices = Array.from(document.querySelectorAll('.listing-item__listing-data__info__price'));
+            const latestSoldPrices = Array.from(document.querySelectorAll('.latest-sales>ul>li>span.price'));
+            console.log(latestSoldPrices);
+
+            let elementElem = null;
+            let rarityElem = null;
+            let cardCategoryElem = null;
+            let cardTypeElem = null;
+            let toplowestListPrice = null;
+            let mediumlowestListPrice = null;
+            let bottomlowestListPrice = null;
+
+            if (selector && ListPrices) {
+                selector.forEach((item) => {
+                    if (item.innerText === 'Element:') elementElem = item.nextElementSibling.innerText;
+                    if (item.innerText === 'Rarity:') rarityElem = item.nextElementSibling.innerText;
+                    if (item.innerText === 'Card Category:') cardCategoryElem = item.nextElementSibling.innerText;
+                    if (item.innerText === 'Card Type:') cardTypeElem = item.nextElementSibling.innerText;
+                });
+
+                toplowestListPrice = ListPrices[2]?.innerText || '0$';
+                mediumlowestListPrice = ListPrices[1]?.innerText || '0$';
+                bottomlowestListPrice = ListPrices[0]?.innerText || '0$';
+
+                activateModalAndObserve().then(averagePrice => {
+                    chrome.runtime.sendMessage({
+                        action: 'cardDetail',
+                        data: {
+                            element: elementElem,
+                            cardCategory: cardCategoryElem,
+                            cardType: cardTypeElem,
+                            rarity: rarityElem,
+                            link: window.location.href,
+                            latestPriceAverage: averagePrice,
+                            toplowestListPrice: parseFloat(toplowestListPrice.replace("$", "")) || 0,
+                            mediumlowestListPrice: parseFloat(mediumlowestListPrice.replace("$", "")) || 0,
+                            bottomlowestListPrice: parseFloat(bottomlowestListPrice.replace("$", "")) || 0
+                        },
+                        message: 'success getCardDetail'
+                    });
+                }).catch((error) => {
+                    console.log("error");
                 })
             }
+        }, 5000);
+    }
 
-            else if (result.bulkStatus === 'add' || result.bulkStatus === 'manage') {
-                scrapeBulkData().then(() => {
-                    window.close();
-                })
-                    .catch((error) => {
-                        console.error('Error occurred during data scraping:', error);
-                    });
+    else if (window.location.href === "https://store.tcgplayer.com/admin/orders/orderlist") {
+        chrome.storage.local.get(['inventoryStatus'], function (result) {
+            if (result.inventoryStatus === "order") {
+                console.log(result.inventoryStatus);
+                setTimeout(() => {
+                    GetAllOrdersByNextPage();
+                    // window.close();
+                }, 5000);
+                chrome.storage.local.clear(() => {
+                    console.log("success clear!!!");
+                });
             }
         });
     }
 });
 
 window.addEventListener('message', event => {
-    if (event.source === window && event.data.type && (event.data.type === 'addMyInventory')) {
-        chrome.runtime.sendMessage({ type: 'addMyInventory', products: event.data.products });
-    }
-
-    if (event.source === window && event.data.type && (event.data.type === 'manageMyInventory')) {
-        chrome.runtime.sendMessage({ type: 'manageMyInventory', products: event.data.products });
-    }
-
-    if (event.source === window && event.data.type && (event.data.type === 'startScraping')) {
-        chrome.runtime.sendMessage({ type: 'startScraping' });
-    }
-
-    if (event.source === window && event.data.type && (event.data.type === 'bulkManageProducts')) {
-        chrome.runtime.sendMessage({ type: 'bulkManageProducts', products: event.data.products });
-    }
-
-    if (event.source === window && event.data.type && (event.data.type === 'bulkAddProducts')) {
-        chrome.runtime.sendMessage({ type: 'bulkAddProducts', products: event.data.products });
+    if (event.source === window && event.data.type) {
+        const { type, products } = event.data;
+        switch (type) {
+            case 'manageMyInventory':
+                chrome.runtime.sendMessage({ type: 'manageMyInventory', products });
+                break;
+            case 'fetchCard':
+                chrome.runtime.sendMessage({ type: 'fetchCard' });
+                break;
+            case 'fetchCardDetail':
+                chrome.runtime.sendMessage({ type: 'fetchCardDetail', products });
+                break;
+            case 'fetchSaveInfo':
+                chrome.runtime.sendMessage({ type: 'fetchSaveInfo', products });
+                break;
+            case 'fetchOrder':
+                chrome.runtime.sendMessage({ type: 'fetchOrder' });
+                break;
+        }
     }
 });
