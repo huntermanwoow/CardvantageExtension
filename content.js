@@ -1,23 +1,24 @@
 async function runAfterModalLoaded() {
     const modal = document.querySelector("ul.is-modal");
     if (modal) {
-        console.log(modal.children);
+        console.log(modal.children.length);
         let total = 0;
         let count = 0;
-        for (let item of modal.children) {
-            const price = parseFloat(item.children[3].innerText.replace("$", ""));
-            if (!isNaN(price)) {
-                total += price;
-                count++;
-                if (count === 10) {
-                    return total / count;
+        if (modal.children.length >= 10) {
+            for (let item of modal.children) {
+                const price = parseFloat(item?.children[3]?.innerText.replace("$", "")) || 0;
+                if (!isNaN(price)) {
+                    total += price;
+                    count++;
+                    if (count === 10) {
+                        return total / count;
+                    }
                 }
             }
-            console.log(total / count);
         }
-        return count > 0 ? total / count : 0;
+        return count > 10 ? total / count : 0;
     }
-    return 0;
+    else return 0;
 }
 
 function observeModalLoading() {
@@ -253,7 +254,7 @@ window.addEventListener('load', () => {
                     console.log("error");
                 })
             }
-        }, 5000);
+        }, 8000);
     }
 
     else if (window.location.href === "https://store.tcgplayer.com/admin/orders/orderlist") {
