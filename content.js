@@ -102,13 +102,23 @@ function scrapeOrderFromCurrentPage() {
 }
 
 function GetAllOrdersByNextPage() {
-    const nextPageButton = document.querySelector('.pagination-next').children[0];
+    const nextPageButton = document.querySelector('.pagination-next');
     if (nextPageButton) {
         scrapeOrderFromCurrentPage();
+
+        // Temporarily change display style to make it clickable
+        const originalDisplay = nextPageButton.style.display;
+        nextPageButton.style.display = 'block';
+
         setTimeout(() => {
             nextPageButton.click();
+
+            // Restore original display style after clicking
+            nextPageButton.style.display = originalDisplay;
             GetAllOrdersByNextPage();
         }, 5000);
+    } else {
+        window.close();
     }
 }
 
@@ -131,7 +141,7 @@ window.addEventListener('load', () => {
         }
     }
 
-    else if (window.location.href.includes("https://www.tcgplayer.com/search/sorcery-contested-realm/product?productLineName=sorcery-contested-realm&view=grid")) {
+    else if (window.location.href.includes("https://www.tcgplayer.com/search")) {
         setInterval(() => {
             const productLines = Array.from(document.querySelectorAll('h3.product-card__category-name'))
                 .map(lineElement => lineElement.innerText);
@@ -211,9 +221,6 @@ window.addEventListener('load', () => {
         setInterval(() => {
             const selector = Array.from(document.querySelectorAll('strong'));
             const ListPrices = Array.from(document.querySelectorAll('.listing-item__listing-data__info__price'));
-            const latestSoldPrices = Array.from(document.querySelectorAll('.latest-sales>ul>li>span.price'));
-            console.log(latestSoldPrices);
-
             let elementElem = null;
             let rarityElem = null;
             let cardCategoryElem = null;
@@ -260,14 +267,7 @@ window.addEventListener('load', () => {
     else if (window.location.href === "https://store.tcgplayer.com/admin/orders/orderlist") {
         chrome.storage.local.get(['inventoryStatus'], function (result) {
             if (result.inventoryStatus === "order") {
-                console.log(result.inventoryStatus);
-                setTimeout(() => {
-                    GetAllOrdersByNextPage();
-                    // window.close();
-                }, 5000);
-                chrome.storage.local.clear(() => {
-                    console.log("success clear!!!");
-                });
+                GetAllOrdersByNextPage();
             }
         });
     }
@@ -291,6 +291,12 @@ window.addEventListener('message', event => {
                 break;
             case 'fetchOrder':
                 chrome.runtime.sendMessage({ type: 'fetchOrder' });
+                break;
+            case 'fetchSelectCardDetail':
+                chrome.runtime.sendMessage({ type: 'fetchSelectCardDetail', products });
+                break;
+            case 'myInventoryOnly':
+                chrome.runtime.sendMessage({ type: 'myInventoryOnly' });
                 break;
         }
     }

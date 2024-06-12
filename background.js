@@ -181,16 +181,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         processTabData(0, Object.values(message.products));
     }
 
-    else if (message.type === 'fetchCard') {
-        chrome.storage.local.clear(() => {
-            console.log("success clear!!!");
-        })
-        chrome.tabs.create({ url: 'https://www.tcgplayer.com/login?returnUrl=https://www.tcgplayer.com/search/sorcery-contested-realm/product?productLineName=sorcery-contested-realm&view=grid' }, function (tab) {
-            chrome.storage.local.set({ 'inventoryStatus': 'login' });
-            chrome.storage.local.set({ 'product': null });
-        });
-    }
-
     else if (message.type === 'fetchOrder') {
         chrome.storage.local.clear(() => {
             console.log("success clear!!!");
@@ -207,7 +197,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         })
         chrome.storage.local.set({ 'AllCards': message.products });
         chrome.storage.local.set({ 'bulkStatus': 'getAllCards' });
-        console.log(message.products);
         processCardDetail(0, message.products);
+    }
+
+    else if (message.type === 'fetchSelectCardDetail') {
+        chrome.storage.local.clear(() => {
+            console.log("success clear!!!");
+        })
+        chrome.storage.local.set({ 'SelectCards': message.products });
+        chrome.storage.local.set({ 'bulkStatus': 'getSelectCards' });
+        console.log(message.products.productLine[0]);
+        if (message.products.productLine[0]) {
+            chrome.tabs.create({ url: `https://www.tcgplayer.com/search/all/product?view=grid&setName=${message.products.sets.join('|')}` }, function (tab) {
+            });
+        }
+        else {
+            chrome.tabs.create({ url: `https://www.tcgplayer.com/search/${message.products.productLine[0]}/product?productLineName=${message.products.productLine[0]}&view=grid&setName=${message.products.sets.join('|')}` }, function (tab) {
+            });
+        }
+    }
+
+    else if (message.type === 'myInventoryOnly') {
+        chrome.storage.local.clear(() => {
+            console.log("success clear!!!");
+        })
+        chrome.tabs.create({ url: `https://store.tcgplayer.com/admin/product` }, function (tab) {
+        });
     }
 });
