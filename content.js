@@ -271,6 +271,77 @@ window.addEventListener('load', () => {
             }
         });
     }
+
+    else if (window.location.href === "https://store.tcgplayer.com/admin/product/catalog") {
+        const myInventoryOnly = document.querySelector("label#OnlyMyInventoryLabel");
+        const searchBtn = document.querySelector("input#Search");
+
+        async function clickElement(element) {
+            if (element) {
+                element.click();
+                console.log(`Clicked on: ${element.id || element.className || element.tagName}`);
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for 2 seconds after click
+            } else {
+                console.log('Element not found:', element);
+            }
+        }
+
+        function scrapeInventory() {
+            const links = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'))
+                .map(nameElement => nameElement.parentElement.getAttribute("href")).filter(item => item !== null);
+            const inStocks = Array.from(document.querySelectorAll('span[data-bind="text: InStock"]'))
+                .map(stockElement => stockElement.innerText);
+
+            chrome.runtime.sendMessage({
+                action: 'MyInventory',
+                data: {
+                    Links: links,
+                    InStocks: inStocks
+                },
+                message: 'success getMyInventory'
+            });
+
+            // Check if there's a next button to click
+            const nextBtn = document.querySelector("div.pager").lastElementChild.previousElementSibling;
+            if (nextBtn) {
+                nextBtn.click();
+            } else {
+                clearInterval(intervalId);
+            }
+        }
+
+        async function main() {
+            await clickElement(myInventoryOnly);
+            await clickElement(searchBtn);
+
+            // Wait for search results to load using MutationObserver
+            await new Promise(resolve => {
+                const observer = new MutationObserver((mutationsList, observer) => {
+                    for (let mutation of mutationsList) {
+                        if (mutation.type === 'childList') {
+                            // Check if search results have loaded (adjust selector as needed)
+                            const addBtn = Array.from(document.querySelectorAll('a.blue-button-sm-darker'))
+                                .filter(btnElement => btnElement.innerText === 'Add');
+                            if (addBtn.length > 0) {
+                                clearInterval(intervalId);
+                                scrapeInventory();
+                                observer.disconnect();
+                                resolve();
+                            }
+                        }
+                    }
+                });
+                observer.observe(document.querySelector('body'), { childList: true, subtree: true });
+            });
+
+            // Start scraping at regular intervals
+            intervalId = setInterval(scrapeInventory, 5000);
+        }
+
+        let intervalId; // Declare intervalId here
+
+        main().catch(err => console.error('Error in main:', err));
+    }
 });
 
 window.addEventListener('message', event => {

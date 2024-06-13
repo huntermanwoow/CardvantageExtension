@@ -168,6 +168,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
     }
 
+    else if (message.action === 'MyInventory') {
+        if (message.message === "success getMyInventory") {
+            axios.post('http://localhost:8000/api/myInventory', {
+                data: message.data
+            }, {
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => {
+                    console.log(response);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                })
+        }
+        else if (message.message === "failed bulk") {
+            console.log("failed");
+        }
+    }
+
     else if (message.type === 'manageMyInventory') {
         chrome.storage.local.clear(() => {
             console.log("success clear!!!");
@@ -206,14 +227,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         })
         chrome.storage.local.set({ 'SelectCards': message.products });
         chrome.storage.local.set({ 'bulkStatus': 'getSelectCards' });
-        console.log(message.products.productLine[0]);
-        if (message.products.productLine[0]) {
-            chrome.tabs.create({ url: `https://www.tcgplayer.com/search/all/product?view=grid&setName=${message.products.sets.join('|')}` }, function (tab) {
-            });
+        if (message.products.productLine[0] === 'all') {
+            if (message.products.sets.length > 0) {
+                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/all/product?view=grid&page=1&setName=${message.products.sets.join('|')}` }, function (tab) {
+                });
+            }
+            else {
+                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/all/product?view=grid` }, function (tab) {
+                });
+            }
         }
         else {
-            chrome.tabs.create({ url: `https://www.tcgplayer.com/search/${message.products.productLine[0]}/product?productLineName=${message.products.productLine[0]}&view=grid&setName=${message.products.sets.join('|')}` }, function (tab) {
-            });
+            if (message.products.sets.length > 0) {
+                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/${message.products.productLine[0]}/product?productLineName=${message.products.productLine[0]}&view=grid&setName=${message.products.sets.join('|')}` }, function (tab) {
+                });
+            }
+            else {
+                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/${message.products.productLine[0]}/product?productLineName=${message.products.productLine[0]}&view=grid` }, function (tab) {
+                });
+            }
         }
     }
 
@@ -221,7 +253,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.storage.local.clear(() => {
             console.log("success clear!!!");
         })
-        chrome.tabs.create({ url: `https://store.tcgplayer.com/admin/product` }, function (tab) {
+        chrome.tabs.create({ url: `https://store.tcgplayer.com/admin/product/catalog` }, function (tab) {
         });
     }
 });
