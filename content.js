@@ -151,7 +151,7 @@ function scrapeInventory() {
 }
 
 window.addEventListener('load', () => {
-    if (window.location.href === "https://www.tcgplayer.com/login?returnUrl=https://www.tcgplayer.com/search/sorcery-contested-realm/product?productLineName=sorcery-contested-realm&view=grid") {
+    if (window.location.href.includes("https://www.tcgplayer.com/login")) {
         const emailInput = document.querySelector('input[type="email"]');
         const passwordInput = document.querySelector('input[type="password"]');
 
@@ -177,31 +177,31 @@ window.addEventListener('load', () => {
             }
             else {
                 const nextbtn = document.querySelector("a[aria-label='Next page']");
-                if (window.getComputedStyle(nextbtn).style.diabled === false) {
-                    const productLines = Array.from(document.querySelectorAll('h3.product-card__category-name'))
-                        .map(lineElement => lineElement.innerText);
-                    const rarityElements = Array.from(document.querySelectorAll('.product-card__rarity'))
-                        .map(viewElement => viewElement.children[0].innerText);
-                    const sets = Array.from(document.querySelectorAll('.product-card__set-name'))
-                        .map(setElement => setElement.innerText);
-                    const productNames = Array.from(document.querySelectorAll('span.product-card__title.truncate'))
-                        .map(nameElement => nameElement.innerText);
-                    const links = Array.from(document.querySelectorAll('.product-card__content'))
-                        .map(linkElement => linkElement.children[0].getAttribute('href'));
+                const productLines = Array.from(document.querySelectorAll('h3.product-card__category-name'))
+                    .map(lineElement => lineElement.innerText);
+                const rarityElements = Array.from(document.querySelectorAll('.product-card__rarity'))
+                    .map(viewElement => viewElement.children[0].innerText);
+                const sets = Array.from(document.querySelectorAll('.product-card__set-name'))
+                    .map(setElement => setElement.innerText);
+                const productNames = Array.from(document.querySelectorAll('span.product-card__title.truncate'))
+                    .map(nameElement => nameElement.innerText);
+                const links = Array.from(document.querySelectorAll('.product-card__content'))
+                    .map(linkElement => linkElement.children[0].getAttribute('href'));
 
-                    const data = productLines.map((productLine, index) => ({
-                        productLine,
-                        set: sets[index] || null,
-                        productName: productNames[index] || null,
-                        rarity: rarityElements[index] || null,
-                        link: links[index] || null
-                    }));
-
-                    chrome.runtime.sendMessage({ action: 'scrapedCard', data: data });
+                const data = productLines.map((productLine, index) => ({
+                    productLine,
+                    set: sets[index] || null,
+                    productName: productNames[index] || null,
+                    rarity: rarityElements[index] || null,
+                    link: links[index] || null
+                }));
+                chrome.runtime.sendMessage({ action: 'scrapedCard', data: data });
+                if (!document.querySelector("a.is-disabled")) {
                     nextbtn.click();
                 }
                 else {
                     chrome.runtime.sendMessage({ action: 'endCardScraping' });
+                    window.close();
                 }
             }
         }, 10000);
