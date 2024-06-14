@@ -122,6 +122,34 @@ function GetAllOrdersByNextPage() {
     }
 }
 
+function scrapeInventory() {
+    setTimeout(() => {
+        // Check if there's a next button to click
+        const nextBtn = document.querySelector("div.pager").lastElementChild.previousElementSibling;
+        const disabled = document.querySelector("a.ui-state-disabled.ui-corner-tl.ui-corner-bl");
+        const links = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'))
+            .map(nameElement => nameElement.parentElement.getAttribute("href")).filter(item => item !== null);
+        const inStocks = Array.from(document.querySelectorAll('span[data-bind="text: InStock"]'))
+            .map(stockElement => stockElement.innerText);
+        const data = links.map((link, index) => ({
+            link: links[index] || null,
+            inStock: inStocks[index] || null
+        }));
+        chrome.runtime.sendMessage({
+            action: 'MyInventory',
+            data: data,
+            message: 'success getMyInventory'
+        });
+        if (!disabled || disabled.innerText === 'First') {
+            nextBtn.click();
+        } else if (disabled.innerText === 'Last') {
+            clearInterval(scrapeInventory);
+            chrome.runtime.sendMessage({ action: 'EndCatalog' });
+            window.close();
+        }
+    }, 2000)
+}
+
 window.addEventListener('load', () => {
     if (window.location.href === "https://www.tcgplayer.com/login?returnUrl=https://www.tcgplayer.com/search/sorcery-contested-realm/product?productLineName=sorcery-contested-realm&view=grid") {
         const emailInput = document.querySelector('input[type="email"]');
@@ -143,28 +171,39 @@ window.addEventListener('load', () => {
 
     else if (window.location.href.includes("https://www.tcgplayer.com/search")) {
         setInterval(() => {
-            const productLines = Array.from(document.querySelectorAll('h3.product-card__category-name'))
-                .map(lineElement => lineElement.innerText);
-            const rarityElements = Array.from(document.querySelectorAll('.product-card__rarity'))
-                .map(viewElement => viewElement.children[0].innerText);
-            const sets = Array.from(document.querySelectorAll('.product-card__set-name'))
-                .map(setElement => setElement.innerText);
-            const productNames = Array.from(document.querySelectorAll('span.product-card__title.truncate'))
-                .map(nameElement => nameElement.innerText);
-            const links = Array.from(document.querySelectorAll('.product-card__content'))
-                .map(linkElement => linkElement.children[0].getAttribute('href'));
-            const nextbtn = document.querySelector("a[aria-label='Next page']");
+            if (document.querySelector("img.blank-slate__image")) {
+                chrome.runtime.sendMessage({ action: 'failCard' });
+                window.close();
+            }
+            else {
+                const nextbtn = document.querySelector("a[aria-label='Next page']");
+                if (window.getComputedStyle(nextbtn).style.diabled === false) {
+                    const productLines = Array.from(document.querySelectorAll('h3.product-card__category-name'))
+                        .map(lineElement => lineElement.innerText);
+                    const rarityElements = Array.from(document.querySelectorAll('.product-card__rarity'))
+                        .map(viewElement => viewElement.children[0].innerText);
+                    const sets = Array.from(document.querySelectorAll('.product-card__set-name'))
+                        .map(setElement => setElement.innerText);
+                    const productNames = Array.from(document.querySelectorAll('span.product-card__title.truncate'))
+                        .map(nameElement => nameElement.innerText);
+                    const links = Array.from(document.querySelectorAll('.product-card__content'))
+                        .map(linkElement => linkElement.children[0].getAttribute('href'));
 
-            const data = productLines.map((productLine, index) => ({
-                productLine,
-                set: sets[index] || null,
-                productName: productNames[index] || null,
-                rarity: rarityElements[index] || null,
-                link: links[index] || null
-            }));
+                    const data = productLines.map((productLine, index) => ({
+                        productLine,
+                        set: sets[index] || null,
+                        productName: productNames[index] || null,
+                        rarity: rarityElements[index] || null,
+                        link: links[index] || null
+                    }));
 
-            chrome.runtime.sendMessage({ action: 'scrapedCard', data: data });
-            nextbtn.click();
+                    chrome.runtime.sendMessage({ action: 'scrapedCard', data: data });
+                    nextbtn.click();
+                }
+                else {
+                    chrome.runtime.sendMessage({ action: 'endCardScraping' });
+                }
+            }
         }, 10000);
     }
 
@@ -212,6 +251,19 @@ window.addEventListener('load', () => {
                     message: 'success'
                 }, function () {
                     console.log("card update");
+                });
+            } else if (result.bulkStatus === "fetchInventory") {
+                const inputField1 = document.querySelector('span[data-bind="validationMessage: newPrice"]').previousElementSibling;
+
+                chrome.runtime.sendMessage({
+                    action: 'scrapeMyInventory',
+                    data: {
+                        link: window.location.href,
+                        Price: inputField1.value,
+                    },
+                    message: 'success'
+                }, function () {
+                    console.log("scrape Myinventory");
                 });
             }
         });
@@ -273,74 +325,25 @@ window.addEventListener('load', () => {
     }
 
     else if (window.location.href === "https://store.tcgplayer.com/admin/product/catalog") {
-        const myInventoryOnly = document.querySelector("label#OnlyMyInventoryLabel");
-        const searchBtn = document.querySelector("input#Search");
-
-        async function clickElement(element) {
-            if (element) {
-                element.click();
-                console.log(`Clicked on: ${element.id || element.className || element.tagName}`);
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for 2 seconds after click
-            } else {
-                console.log('Element not found:', element);
+        const interval = setInterval(() => {
+            const myInventoryOnly = document.querySelector("input#OnlyMyInventory");
+            if (myInventoryOnly) {
+                myInventoryOnly.click();
             }
-        }
 
-        function scrapeInventory() {
-            const links = Array.from(document.querySelectorAll('span[data-bind="text: ProductName"]'))
-                .map(nameElement => nameElement.parentElement.getAttribute("href")).filter(item => item !== null);
-            const inStocks = Array.from(document.querySelectorAll('span[data-bind="text: InStock"]'))
-                .map(stockElement => stockElement.innerText);
-
-            chrome.runtime.sendMessage({
-                action: 'MyInventory',
-                data: {
-                    Links: links,
-                    InStocks: inStocks
-                },
-                message: 'success getMyInventory'
-            });
-
-            // Check if there's a next button to click
-            const nextBtn = document.querySelector("div.pager").lastElementChild.previousElementSibling;
-            if (nextBtn) {
-                nextBtn.click();
-            } else {
-                clearInterval(intervalId);
+            const searchBtn = document.querySelector("input#Search");
+            if (searchBtn) {
+                searchBtn.click();
             }
-        }
-
-        async function main() {
-            await clickElement(myInventoryOnly);
-            await clickElement(searchBtn);
-
-            // Wait for search results to load using MutationObserver
-            await new Promise(resolve => {
-                const observer = new MutationObserver((mutationsList, observer) => {
-                    for (let mutation of mutationsList) {
-                        if (mutation.type === 'childList') {
-                            // Check if search results have loaded (adjust selector as needed)
-                            const addBtn = Array.from(document.querySelectorAll('a.blue-button-sm-darker'))
-                                .filter(btnElement => btnElement.innerText === 'Add');
-                            if (addBtn.length > 0) {
-                                clearInterval(intervalId);
-                                scrapeInventory();
-                                observer.disconnect();
-                                resolve();
-                            }
-                        }
-                    }
-                });
-                observer.observe(document.querySelector('body'), { childList: true, subtree: true });
-            });
-
-            // Start scraping at regular intervals
-            intervalId = setInterval(scrapeInventory, 5000);
-        }
-
-        let intervalId; // Declare intervalId here
-
-        main().catch(err => console.error('Error in main:', err));
+            setTimeout(() => {
+                const addBtn = Array.from(document.querySelectorAll('a.blue-button-sm-darker'))
+                    .filter(btnElement => btnElement.innerText === 'Add');
+                if (addBtn.length === 0) {
+                    clearInterval(interval);
+                    const scrapeMyInventory = setInterval(() => scrapeInventory(), 3000);
+                }
+            }, 3000)
+        }, 10000)
     }
 });
 
@@ -364,10 +367,14 @@ window.addEventListener('message', event => {
                 chrome.runtime.sendMessage({ type: 'fetchOrder' });
                 break;
             case 'fetchSelectCardDetail':
+                console.log(products);
                 chrome.runtime.sendMessage({ type: 'fetchSelectCardDetail', products });
                 break;
             case 'myInventoryOnly':
                 chrome.runtime.sendMessage({ type: 'myInventoryOnly' });
+                break;
+            case 'InventoryFetch':
+                chrome.runtime.sendMessage({ type: 'InventoryFetch', products });
                 break;
         }
     }

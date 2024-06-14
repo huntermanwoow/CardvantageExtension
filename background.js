@@ -64,6 +64,7 @@ function processCardSaveInfo(index, data) {
     chrome.storage.local.clear(() => {
         console.log("success clear!!!");
     })
+
     chrome.storage.local.set({ 'AllCards': data });
     chrome.storage.local.set({ 'bulkStatus': 'getAllSaveInfo' });
     if (index < data.length) {
@@ -75,6 +76,27 @@ function processCardSaveInfo(index, data) {
                 if (message.action === 'scrapeCardSaveInfo' && message.data.link.split('/')[6] === item.link.split('/')[2]) {
                     chrome.tabs.remove(tabId, function () {
                         processCardSaveInfo(index + 1, data);
+                    });
+                    chrome.runtime.onMessage.removeListener(listener);
+                }
+            })
+        });
+    } else {
+        // All tabs processed
+        console.log("All tabs processed.");
+    }
+}
+
+function processInventoryInfo(index, data) {
+    if (index < data.length) {
+        var item = data[index];
+        chrome.tabs.create({ url: `https://store.tcgplayer.com/admin/product/manage/${item.link.split('/')[2]}` }, function (tab) {
+            const tabId = tab.id;
+            chrome.runtime.onMessage.addListener(function listener(message, sender, sendResponse) {
+                console.log(message);
+                if (message.action === 'scrapeMyInventory' && message.data.link.split('/')[6] === item.link.split('/')[2]) {
+                    chrome.tabs.remove(tabId, function () {
+                        processInventoryInfo(index + 1, data);
                     });
                     chrome.runtime.onMessage.removeListener(listener);
                 }
@@ -189,6 +211,55 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
     }
 
+    else if (message.action === 'EndCatalog') {
+        console.log("endcatalog");
+        axios.post('http://localhost:8000/api/endcatalog', {
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => {
+                console.log(response);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            })
+    }
+
+    else if (message.action === 'scrapeMyInventory') {
+        console.log("endcatalog");
+        axios.post('http://localhost:8000/api/endDetailInventory', {
+            data: message.data
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => {
+                console.log(response);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            })
+    }
+
+    else if (message.action === 'endCardScraping') {
+        console.log("endcardscraping");
+        axios.post('http://localhost:8000/api/endCardScraping', {
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => {
+                console.log(response);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            })
+    }
+
     else if (message.type === 'manageMyInventory') {
         chrome.storage.local.clear(() => {
             console.log("success clear!!!");
@@ -228,22 +299,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.storage.local.set({ 'SelectCards': message.products });
         chrome.storage.local.set({ 'bulkStatus': 'getSelectCards' });
         if (message.products.productLine[0] === 'all') {
-            if (message.products.sets.length > 0) {
-                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/all/product?view=grid&page=1&setName=${message.products.sets.join('|')}` }, function (tab) {
+            if (message.products.sets.length === 1) {
+                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/all/${message.products.sets[0]}?view=grid&page=1&setName=${message.products.sets[0]}` }, function (tab) {
                 });
             }
+
             else {
-                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/all/product?view=grid` }, function (tab) {
+                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/all/product?view=grid&setName=${message.products.sets.join('|')}` }, function (tab) {
                 });
             }
         }
+
         else {
-            if (message.products.sets.length > 0) {
-                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/${message.products.productLine[0]}/product?productLineName=${message.products.productLine[0]}&view=grid&setName=${message.products.sets.join('|')}` }, function (tab) {
+            if (message.products.sets.length === 1) {
+                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/${message.products.productLine[0]}/${message.products.sets[0]}?productLineName=${message.products.productLine[0]}&view=grid&setName=${message.products.sets[0]}` }, function (tab) {
                 });
             }
+
             else {
-                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/${message.products.productLine[0]}/product?productLineName=${message.products.productLine[0]}&view=grid` }, function (tab) {
+                chrome.tabs.create({ url: `https://www.tcgplayer.com/search/${message.products.productLine[0]}/product?productLineName=${message.products.productLine[0]}&view=grid&setName=${message.products.sets.join('|')}` }, function (tab) {
                 });
             }
         }
@@ -255,5 +329,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         })
         chrome.tabs.create({ url: `https://store.tcgplayer.com/admin/product/catalog` }, function (tab) {
         });
+    }
+
+    else if (message.type === 'InventoryFetch') {
+        chrome.storage.local.clear(() => {
+            console.log("success clear!!!");
+        })
+        chrome.storage.local.set({ "bulkStatus": "fetchInventory" });
+        console.log(message.products);
+        processInventoryInfo(0, message.products);
     }
 });
