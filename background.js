@@ -28,7 +28,6 @@ function processTabData(index, data) {
                         chrome.tabs.remove(result.currentTab);
                         processTabData(index + 1, data);
                     })
-
                 }
             }
         })
@@ -103,7 +102,6 @@ function processInventoryInfo(index, data) {
             })
         });
     } else {
-        // All tabs processed
         console.log("All tabs processed.");
     }
 }

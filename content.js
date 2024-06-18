@@ -102,14 +102,9 @@ function scrapeOrderFromCurrentPage() {
 }
 
 function GetAllOrdersByNextPage() {
-    const nextPageButton = document.querySelector('.pagination-next');
+    const nextPageButton = document.querySelector('a.pagination-next');
     if (nextPageButton) {
         scrapeOrderFromCurrentPage();
-
-        // Temporarily change display style to make it clickable
-        const originalDisplay = nextPageButton.style.display;
-        nextPageButton.style.display = 'block';
-
         setTimeout(() => {
             nextPageButton.click();
 
@@ -349,7 +344,7 @@ window.addEventListener('load', () => {
 
 window.addEventListener('message', event => {
     if (event.source === window && event.data.type) {
-        const { type, products } = event.data;
+        const { type, products, credential } = event.data;
         switch (type) {
             case 'manageMyInventory':
                 chrome.runtime.sendMessage({ type: 'manageMyInventory', products });
@@ -375,6 +370,9 @@ window.addEventListener('message', event => {
                 break;
             case 'InventoryFetch':
                 chrome.runtime.sendMessage({ type: 'InventoryFetch', products });
+                break;
+            case 'sendCredential':
+                console.log(credential);
                 break;
         }
     }
