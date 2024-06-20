@@ -8,7 +8,6 @@ function processTabData(index, data) {
         });
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (message.action === 'updatecard') {
-                console.log("OK!!!!!");
                 if ((message.link.split('/')[6] === item.link.split('/')[2])) {
                     axios.post('http://localhost:8000/api/Listproduct', {
                         data: item
@@ -92,7 +91,6 @@ function processInventoryInfo(index, data) {
         chrome.tabs.create({ url: `https://store.tcgplayer.com/admin/product/manage/${item.link.split('/')[2]}` }, function (tab) {
             const tabId = tab.id;
             chrome.runtime.onMessage.addListener(function listener(message, sender, sendResponse) {
-                console.log(message);
                 if (message.action === 'scrapeMyInventory' && message.data.link.split('/')[6] === item.link.split('/')[2]) {
                     chrome.tabs.remove(tabId, function () {
                         processInventoryInfo(index + 1, data);
@@ -190,19 +188,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     else if (message.action === 'MyInventory') {
         if (message.message === "success getMyInventory") {
-            axios.post('http://localhost:8000/api/myInventory', {
-                data: message.data
-            }, {
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+            chrome.storage.local.get(['credential'], (result) => {
+                axios.post('http://localhost:8000/api/myInventory', {
+                    data: message.data,
+                    user: result.credential.email
+                }, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                    .then(response => {
+                        console.log(response);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    })
             })
-                .then(response => {
-                    console.log(response);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                })
+
         }
         else if (message.message === "failed bulk") {
             console.log("failed");
@@ -226,7 +228,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     else if (message.action === 'scrapeMyInventory') {
-        console.log("endcatalog");
+        console.log("endDetailInventory");
         axios.post('http://localhost:8000/api/endDetailInventory', {
             data: message.data
         }, {
@@ -259,9 +261,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     else if (message.type === 'manageMyInventory') {
-        chrome.storage.local.clear(() => {
-            console.log("success clear!!!");
-        })
         console.log('Received message from frontend:', message.products);
         chrome.storage.local.set({ "inventoryProduct": message.products });
         chrome.storage.local.set({ "bulkStatus": "updateCard" });
@@ -272,9 +271,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     else if (message.type === 'fetchOrder') {
-        chrome.storage.local.clear(() => {
-            console.log("success clear!!!");
-        })
         chrome.tabs.create({ url: 'https://store.tcgplayer.com/admin/orders/orderlist' }, function (tab) {
             chrome.storage.local.set({ 'inventoryStatus': 'order' });
             chrome.storage.local.set({ 'product': null });
@@ -282,18 +278,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     else if (message.type === 'fetchCardDetail') {
-        chrome.storage.local.clear(() => {
-            console.log("success clear!!!");
-        })
         chrome.storage.local.set({ 'AllCards': message.products });
         chrome.storage.local.set({ 'bulkStatus': 'getAllCards' });
         processCardDetail(0, message.products);
     }
 
     else if (message.type === 'fetchSelectCardDetail') {
-        chrome.storage.local.clear(() => {
-            console.log("success clear!!!");
-        })
         chrome.storage.local.set({ 'SelectCards': message.products });
         chrome.storage.local.set({ 'bulkStatus': 'getSelectCards' });
         if (message.products.productLine[0] === 'all') {
@@ -322,17 +312,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     else if (message.type === 'myInventoryOnly') {
-        chrome.storage.local.clear(() => {
-            console.log("success clear!!!");
-        })
         chrome.tabs.create({ url: `https://store.tcgplayer.com/admin/product/catalog` }, function (tab) {
         });
     }
 
     else if (message.type === 'InventoryFetch') {
-        chrome.storage.local.clear(() => {
-            console.log("success clear!!!");
-        })
         chrome.storage.local.set({ "bulkStatus": "fetchInventory" });
         console.log(message.products);
         processInventoryInfo(0, message.products);

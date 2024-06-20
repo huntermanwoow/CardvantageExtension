@@ -138,7 +138,7 @@ function scrapeInventory() {
         if (!disabled || disabled.innerText === 'First') {
             nextBtn.click();
         } else if (disabled.innerText === 'Last') {
-            clearInterval(scrapeInventory);
+            // clearInterval(scrapeInventory);
             chrome.runtime.sendMessage({ action: 'EndCatalog' });
             window.close();
         }
@@ -147,21 +147,24 @@ function scrapeInventory() {
 
 window.addEventListener('load', () => {
     if (window.location.href.includes("https://www.tcgplayer.com/login")) {
+        chrome.storage.local.get(['credential'], (result) => {
+            console.log(result.credential);
+            if (emailInput && passwordInput) {
+                emailInput.value = result.credential.email;
+                passwordInput.value = result.credential.password;
+                emailInput.dispatchEvent(new Event('input'));
+                passwordInput.dispatchEvent(new Event('input'));
+                const submitButton = document.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.click();
+                } else {
+                    console.error('Submit button not found.');
+                }
+            }
+        })
         const emailInput = document.querySelector('input[type="email"]');
         const passwordInput = document.querySelector('input[type="password"]');
 
-        if (emailInput && passwordInput) {
-            emailInput.value = 'izzyprintingllc@gmail.com';
-            passwordInput.value = 'Pencil1234!!';
-            emailInput.dispatchEvent(new Event('input'));
-            passwordInput.dispatchEvent(new Event('input'));
-            const submitButton = document.querySelector('button[type="submit"]');
-            if (submitButton) {
-                submitButton.click();
-            } else {
-                console.error('Submit button not found.');
-            }
-        }
     }
 
     else if (window.location.href.includes("https://www.tcgplayer.com/search")) {
@@ -372,7 +375,9 @@ window.addEventListener('message', event => {
                 chrome.runtime.sendMessage({ type: 'InventoryFetch', products });
                 break;
             case 'sendCredential':
-                console.log(credential);
+                chrome.storage.local.set({
+                    credential: credential
+                });
                 break;
         }
     }
