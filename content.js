@@ -103,13 +103,13 @@ function scrapeOrderFromCurrentPage() {
 
 function GetAllOrdersByNextPage() {
     const nextPageButton = document.querySelector('a.pagination-next');
+    const pageListItem = document.querySelector('.pagination-list>li');
+    console.log(pageListItem);
+    scrapeOrderFromCurrentPage();
     if (nextPageButton) {
-        scrapeOrderFromCurrentPage();
         setTimeout(() => {
             nextPageButton.click();
-
-            // Restore original display style after clicking
-            nextPageButton.style.display = originalDisplay;
+            scrapeOrderFromCurrentPage();
             GetAllOrdersByNextPage();
         }, 5000);
     } else {
@@ -141,7 +141,7 @@ function scrapeInventory() {
             chrome.runtime.sendMessage({ action: 'EndCatalog' });
             window.close();
         }
-    }, 4000)
+    }, 6000)
 }
 
 window.addEventListener('load', () => {
@@ -163,7 +163,6 @@ window.addEventListener('load', () => {
         })
         const emailInput = document.querySelector('input[type="email"]');
         const passwordInput = document.querySelector('input[type="password"]');
-
     }
 
     else if (window.location.href.includes("https://www.tcgplayer.com/search")) {
