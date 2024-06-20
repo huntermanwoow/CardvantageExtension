@@ -138,11 +138,10 @@ function scrapeInventory() {
         if (!disabled || disabled.innerText === 'First') {
             nextBtn.click();
         } else if (disabled.innerText === 'Last') {
-            // clearInterval(scrapeInventory);
             chrome.runtime.sendMessage({ action: 'EndCatalog' });
             window.close();
         }
-    }, 2000)
+    }, 4000)
 }
 
 window.addEventListener('load', () => {
