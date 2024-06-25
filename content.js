@@ -141,7 +141,7 @@ function scrapeInventory() {
             chrome.runtime.sendMessage({ action: 'EndCatalog' });
             window.close();
         }
-    }, 6000)
+    }, 4000)
 }
 
 window.addEventListener('load', () => {

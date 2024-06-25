@@ -9,7 +9,7 @@ function processTabData(index, data) {
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (message.action === 'updatecard') {
                 if ((message.link.split('/')[6] === item.link.split('/')[2])) {
-                    axios.post('http://localhost:8000/api/Listproduct', {
+                    axios.post('https://cardvantage.ai:8443/api/Listproduct', {
                         data: item
                     }, {
                         headers: {
@@ -108,7 +108,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'scrapedCard') {
         console.log('Received scraped card:', message.data);
         if (message.data.length !== 0) {
-            axios.post('http://localhost:8000/api/scrapingCard', {
+            axios.post('https://cardvantage.ai:8443/api/scrapingCard', {
                 data: message.data
             }, {
                 headers: {
@@ -127,7 +127,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     else if (message.action === 'scrapedOrder') {
         console.log('Received scraped order:', message.data);
         if (message.data.length !== 0) {
-            axios.post('http://localhost:8000/api/scrapingOrder', {
+            axios.post('https://cardvantage.ai:8443/api/scrapingOrder', {
                 data: message.data
             }, {
                 headers: {
@@ -145,7 +145,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     else if (message.action === 'cardDetail') {
         if (message.message === "success getCardDetail") {
             console.log(message.data);
-            axios.post('http://localhost:8000/api/detail', {
+            axios.post('https://cardvantage.ai:8443/api/detail', {
                 data: message.data
             }, {
                 headers: {
@@ -167,7 +167,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     else if (message.action === 'scrapeCardSaveInfo') {
         if (message.message === "success") {
             console.log(message.data);
-            axios.post('http://localhost:8000/api/detailSaveInfo', {
+            axios.post('https://cardvantage.ai:8443/api/detailSaveInfo', {
                 data: message.data
             }, {
                 headers: {
@@ -189,7 +189,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     else if (message.action === 'MyInventory') {
         if (message.message === "success getMyInventory") {
             chrome.storage.local.get(['credential'], (result) => {
-                axios.post('http://localhost:8000/api/myInventory', {
+                axios.post('https://cardvantage.ai:8443/api/myInventory', {
                     data: message.data,
                     user: result.credential.email
                 }, {
@@ -213,7 +213,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     else if (message.action === 'EndCatalog') {
         console.log("endcatalog");
-        axios.post('http://localhost:8000/api/endcatalog', {
+        axios.post('https://cardvantage.ai:8443/api/endcatalog', {
         }, {
             headers: {
                 'Content-Type': 'application/json',
@@ -229,7 +229,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     else if (message.action === 'scrapeMyInventory') {
         console.log("endDetailInventory");
-        axios.post('http://localhost:8000/api/endDetailInventory', {
+        axios.post('https://cardvantage.ai:8443/api/endDetailInventory', {
             data: message.data
         }, {
             headers: {
@@ -246,7 +246,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     else if (message.action === 'endCardScraping') {
         console.log("endcardscraping");
-        axios.post('http://localhost:8000/api/endCardScraping', {
+        axios.post('https://cardvantage.ai:8443/api/endCardScraping', {
         }, {
             headers: {
                 'Content-Type': 'application/json',
