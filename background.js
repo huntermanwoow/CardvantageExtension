@@ -6,6 +6,7 @@ function processTabData(index, data) {
         chrome.tabs.create({ url: `https://store.tcgplayer.com/admin/product/manage/${item.link.split('/')[2]}` }, function (tab) {
             chrome.storage.local.set({ 'currentTab': tab.id });
         });
+
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (message.action === 'updatecard') {
                 if ((message.link.split('/')[6] === item.link.split('/')[2])) {
@@ -31,7 +32,6 @@ function processTabData(index, data) {
             }
         })
     } else {
-        // All tabs processed
         console.log("All tabs processed.");
     }
 }
@@ -80,7 +80,6 @@ function processCardSaveInfo(index, data) {
             })
         });
     } else {
-        // All tabs processed
         console.log("All tabs processed.");
     }
 }
