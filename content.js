@@ -192,7 +192,7 @@ window.addEventListener('load', () => {
                     link: links[index] || null
                 }));
                 chrome.runtime.sendMessage({ action: 'scrapedCard', data: data });
-                if (!document.querySelector("a.is-disabled")) {
+                if (!document.querySelector("a.is-disabled") || document.querySelector("a.is-disabled").getAttribute("aria-label") === "Previous page") {
                     nextbtn.click();
                 }
                 else {
