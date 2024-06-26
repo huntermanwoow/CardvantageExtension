@@ -10,19 +10,22 @@ function processTabData(index, data) {
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (message.action === 'updatecard') {
                 if ((message.link.split('/')[6] === item.link.split('/')[2])) {
-                    axios.post('https://cardvantage.ai:8443/api/Listproduct', {
-                        data: item
-                    }, {
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
+                    chrome.storage.local.get(['credential'], (result) => {
+                        axios.post('https://cardvantage.ai:8443/api/Listproduct', {
+                            data: item,
+                            user: result.credential.email
+                        }, {
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                            .then(response => {
+                                console.log(response);
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                            })
                     })
-                        .then(response => {
-                            console.log(response);
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                        })
                     chrome.storage.local.get(['currentTab'], function (result) {
                         console.log(result.currentTab);
                         chrome.tabs.remove(result.currentTab);
