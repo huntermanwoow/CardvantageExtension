@@ -195,7 +195,7 @@ window.addEventListener('load', () => {
                 if (!document.querySelector("a.is-disabled") || document.querySelector("a.is-disabled").getAttribute("aria-label") === "Previous page") {
                     nextbtn.click();
                 }
-                else {
+                else if(document.querySelector("a.is-disabled").getAttribute("aria-label") === "Next page"){
                     chrome.runtime.sendMessage({ action: 'endCardScraping' });
                     window.close();
                 }
