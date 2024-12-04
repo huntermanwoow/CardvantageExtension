@@ -1,1 +1,1 @@
-This is the chrome extension which is made by plain javascrip.
+This is the chrome extension which is made by plain javascript.
